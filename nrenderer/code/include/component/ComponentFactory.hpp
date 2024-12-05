@@ -6,6 +6,7 @@
 #include <functional>
 #include <unordered_map>
 #include <vector>
+#include <string>
 
 namespace NRenderer
 {
