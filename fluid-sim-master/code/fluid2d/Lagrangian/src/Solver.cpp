@@ -90,7 +90,45 @@ namespace FluidSimulation
         }
 
         // TODO：密度计算
+        
+        // 核函数W: 公式推导参考 https://zhuanlan.zhihu.com/p/630175290
+        double kernelW(double distance) 
+        {
+            double q = distance / supportRadius;
+            double sigma2 = 40 / (7 * pi * supportRadiusSquare);
+            if (q > 1)
+            {
+                return 0.0;
+            }
+            if (q >= 0.5 && q<=1)
+            {
+                return sigma2 * 2 * pow(q, 3);
+            }
+            if (q <= 0.5)
+            {
+                return sigma2 * (6 * (pow(q, 3) - pow(q, 2)) + 1);
+            }
+        }
 
+        // 密度计算
+        void densityUpdate(FluidSimulation::Lagrangian2d::ParticleSystem2d& mPs) 
+        {
+            for (auto& p : mPs.particles) {
+                std::vector<FluidSimulation::Lagrangian2d::ParticleInfo2d> blockParticles = searchNearArea(p, mPs);
+                if (blockParticles.size() != 0) 
+                {
+                    double sum = 0.0;
+                    for (auto& p1 : blockParticles) 
+                    {
+                        double distance = glm::length(p1.position - p.position);
+                        sum += kernelW(distance);
+                    }
+                    p.density = mass * sum;
+                }
+            }
+        }
+
+        
 
 
         // TODO：压力计算
