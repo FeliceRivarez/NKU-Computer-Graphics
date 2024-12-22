@@ -13,6 +13,11 @@ namespace FluidSimulation{
 
 			void solve();
 
+			void advection(MACGrid2d& grid);
+			void compute_external_forces(MACGrid2d& grid);
+			void projection(MACGrid2d& grid);
+
+
 		protected:
 			MACGrid2d& mGrid;
 		};
