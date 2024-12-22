@@ -102,7 +102,7 @@ namespace FluidSimulation
             }
             if (q >= 0.5 && q<=1)
             {
-                return sigma2 * 2 * pow(q, 3);
+                return sigma2 * 2 * pow((1-q), 3);
             }
             if (q <= 0.5)
             {
@@ -132,6 +132,43 @@ namespace FluidSimulation
 
 
         // TODO：压力计算
+
+        // 核函数的梯度
+        double kernelW_grad(double distance)
+        {
+            double q = distance / supportRadius;
+            double grad_q = distance / supportRadius;
+            double sigma2 = 40 / (7 * pi * supportRadiusSquare);
+            if (q > 1)
+            {
+                return 0.0;
+            }
+            if (q >= 0.5 && q <= 1)
+            {
+                return -sigma2 * 6 * pow((1-q), 2)*grad_q;
+            }
+            if (q <= 0.5)
+            {
+                return sigma2 * (6 * (3*pow(q, 2) - 2*q))*grad_q;
+            }
+        }
+
+        // 先计算压强
+        double pressure(const FluidSimulation::Lagrangian2d::ParticleInfo2d& particle)
+        {
+            double res = Lagrangian2dPara::stiffness * (std::pow(max(1.0 * particle.density,1.0*1000) / (1.0 * 1000), 7) - 1.0f);
+            return res;
+        }
+
+        // 更新压强
+        double pressureUpdate(FluidSimulation::Lagrangian2d::ParticleSystem2d& mPs)
+        {
+            for (auto& p : mPs.particles) 
+            {
+                p.pressure = pressure(p);
+                p.pressDivDens2 = p.pressure / (p.density * p.density);
+            }
+        }
 
         void Solver::solve()
         {
