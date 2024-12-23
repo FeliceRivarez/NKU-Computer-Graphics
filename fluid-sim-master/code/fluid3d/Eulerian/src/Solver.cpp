@@ -64,7 +64,7 @@ namespace FluidSimulation
             double tar = 1e-7;//收敛值
             
             double rou = 1.3;//气体密度
-            double coeff = -(rou*mGrid.cellSize*mGrid.cellSize)/Lagrangian3dPara::dt;//基本的迭代系数
+            double coeff = -(rou*grid.cellSize*grid.cellSize)/Lagrangian3dPara::dt;//基本的迭代系数
 
             for(int index=0; index<66; index++){
                 auto compute_P = pressure;
@@ -109,11 +109,9 @@ namespace FluidSimulation
                     }
 
                     double R = compute_P[i][j][k]-pressure[i][j][k];
-                    if(maxR>R){
+                    if(R<0)R=-R;
+                    if(maxR<R){
                         maxR=R;
-                    }
-                    else if(maxR>(-R)){
-                        maxR=(-R);
                     }
 
                 }
@@ -125,18 +123,18 @@ namespace FluidSimulation
             }
 
             FOR_EACH_CELL{
-                if(!mGrid.isSolidCell(i,j,k)){
-                    if(!mGrid.isSolidCell(i-1,j,k) && i>0){
+                if(!grid.isSolidCell(i,j,k)){
+                    if(!grid.isSolidCell(i-1,j,k) && i>0){
                         double compute = pressure[i][j][k]-pressure[i-1][j][k];
-                        grid.mU(i,j,k)-=(Lagrangian3dPara::dt/(mGrid.cellSize*rou))*compute;
+                        grid.mU(i,j,k)-=(Lagrangian3dPara::dt/(grid.cellSize*rou))*compute;
                     }
-                    if(!mGrid.isSolidCell(i,j-1,k) && j>0){
+                    if(!grid.isSolidCell(i,j-1,k) && j>0){
                         double compute = pressure[i][j][k]-pressure[i][j-1][k];
-                        grid.mV(i,j,k)-=(Lagrangian3dPara::dt/(mGrid.cellSize*rou))*compute;
+                        grid.mV(i,j,k)-=(Lagrangian3dPara::dt/(grid.cellSize*rou))*compute;
                     }
-                    if(!mGrid.isSolidCell(i,j,k-1) && k>0){
+                    if(!grid.isSolidCell(i,j,k-1) && k>0){
                         double compute = pressure[i][j][k]-pressure[i][j][k-1];
-                        grid.mW(i,j,k)-=(Lagrangian3dPara::dt/(mGrid.cellSize*rou))*compute;
+                        grid.mW(i,j,k)-=(Lagrangian3dPara::dt/(grid.cellSize*rou))*compute;
                     }
                 }
             }

@@ -57,7 +57,8 @@ namespace FluidSimulation
             double tar = 1e-7;//收敛值
             
             double rou = 1.3;//气体密度
-            double coeff = -(rou*mGrid.cellSize*mGrid.cellSize)/Lagrangian2dPara::dt;//基本的迭代系数
+            double coeff = -(rou*grid.cellSize*grid.cellSize)/Lagrangian2dPara::dt;//基本的迭代系数
+            
 
             for(int index=0; index<66; index++){
                 auto compute_P = pressure;
@@ -90,15 +91,13 @@ namespace FluidSimulation
                     }
 
                     if(count){
-                        compute_P[i][j] = (sum+(grid.checkDivergence(i,j))*coeff)/count;
+                        compute_P[i][j] = (sum+((grid.checkDivergence(i,j))*coeff))/count;
                     }
 
                     double R = compute_P[i][j]-pressure[i][j];
-                    if(maxR>R){
+                    if(R<0)R=-R;
+                    if(maxR<R){
                         maxR=R;
-                    }
-                    else if(maxR>(-R)){
-                        maxR=(-R);
                     }
 
                 }
@@ -110,14 +109,14 @@ namespace FluidSimulation
             }
 
             FOR_EACH_CELL{
-                if(!mGrid.isSolidCell(i,j)){
-                    if(!mGrid.isSolidCell(i-1,j) && i>0){
+                if(!grid.isSolidCell(i,j)){
+                    if(!grid.isSolidCell(i-1,j) && i>0){
                         double compute = pressure[i][j]-pressure[i-1][j];
-                        grid.mU(i,j)-=(Lagrangian2dPara::dt/(mGrid.cellSize*rou))*compute;
+                        grid.mU(i,j)-=(Lagrangian2dPara::dt/(grid.cellSize*rou))*compute;
                     }
-                    if(!mGrid.isSolidCell(i,j-1) && j>0){
+                    if(!grid.isSolidCell(i,j-1) && j>0){
                         double compute = pressure[i][j]-pressure[i][j-1];
-                        grid.mV(i,j)-=(Lagrangian2dPara::dt/(mGrid.cellSize*rou))*compute;
+                        grid.mV(i,j)-=(Lagrangian2dPara::dt/(grid.cellSize*rou))*compute;
                     }
                 }
             }
