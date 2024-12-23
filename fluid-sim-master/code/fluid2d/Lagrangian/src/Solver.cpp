@@ -8,7 +8,7 @@ using namespace std;
 namespace FluidSimulation
 {
     // 部分关键变量初始化
-    double mass;
+    float mass;
     double pi = 3.14159;
     float supportRadius;
     float supportRadiusSquare;
@@ -70,19 +70,29 @@ namespace FluidSimulation
                 glm::vec2 range = mPs.blockExtens[near_block];
                 size_t startIndex = range.x;
                 size_t endIndex = range.y;
-
+                if (endIndex > mPs.particles.size())
+                {
+                    continue;
+                }
+                //cout << startIndex << " " << endIndex << endl;
                 // 遍历整个block中所有粒子
                 for (int i = startIndex; i < endIndex; i++) 
                 {
-                    // 计算当前粒子与邻近block中粒子的距离
-                    // glm库里面length的定义和使用参见：
-                    // https://openframeworks.cc/documentation/math/ofVec2f/#!show_length
-                    double distance = glm::length(mPs.particles[i].position - p.position);
+                    try {
+                        // 计算当前粒子与邻近block中粒子的距离
+                        // glm库里面length的定义和使用参见：
+                        // https://openframeworks.cc/documentation/math/ofVec2f/#!show_length
+                        double distance = glm::length(mPs.particles[i].position - p.position);
 
-                    // 将粒子添加到容器中
-                    if (distance <= supportRadius) 
+                        // 将粒子添加到容器中
+                        if (distance <= supportRadius)
+                        {
+                            nearParticles.push_back(mPs.particles[i]);
+                        }
+                    }
+                    catch (const std::exception& e)
                     {
-                        nearParticles.push_back(mPs.particles[i]);
+                        cout << startIndex << " " << endIndex << endl;
                     }
                 }
             }
@@ -134,22 +144,22 @@ namespace FluidSimulation
         // TODO：压力计算
 
         // 核函数的梯度
-        double kernelW_grad(double distance)
+        glm::vec2 kernelW_grad(float distance, const glm::vec2& r, float h)
         {
-            double q = distance / supportRadius;
-            double grad_q = distance / supportRadius;
-            double sigma2 = 40 / (7 * pi * supportRadiusSquare);
+            float q = distance / supportRadius;
+            auto grad_q = r;
+            float sigma2 = 40 / (7 * pi * supportRadiusSquare);
             if (q > 1)
             {
-                return 0.0;
+                return glm::vec2(0.0f, 0.0f);
             }
             if (q >= 0.5 && q <= 1)
             {
-                return -sigma2 * 6 * pow((1-q), 2)*grad_q;
+                return -sigma2 * 6 * float(pow((1-q), 2))*grad_q;
             }
             if (q <= 0.5)
             {
-                return sigma2 * (6 * (3*pow(q, 2) - 2*q))*grad_q;
+                return sigma2 * (6 * float((3*pow(q, 2)) - 2*q))*grad_q;
             }
         }
 
@@ -161,13 +171,21 @@ namespace FluidSimulation
         }
 
         // 更新压强
-        double pressureUpdate(FluidSimulation::Lagrangian2d::ParticleSystem2d& mPs)
+        void pressureUpdate(FluidSimulation::Lagrangian2d::ParticleSystem2d& mPs)
         {
             for (auto& p : mPs.particles) 
             {
                 p.pressure = pressure(p);
                 p.pressDivDens2 = p.pressure / (p.density * p.density);
             }
+        }
+
+        //拉普拉斯算子
+        double Laplacian(double distance) {
+            if (supportRadius < distance) {
+                return 0;
+            }
+            return 30.0 / (pi * supportRadiusCube * supportRadius) * (supportRadius - distance);
         }
 
         void Solver::solve()
@@ -181,7 +199,84 @@ namespace FluidSimulation
             // 5. check boundary
             // 6. update block id
             // ...
+            //密度计算
+            densityUpdate(mPs);
 
+            //压强计算
+            pressureUpdate(mPs);
+
+            //加速度
+
+            for (size_t i = 0; i < mPs.particles.size(); ++i) {
+                auto& p = mPs.particles[i];
+                //重力
+                p.accleration = glm::vec2(0.0f, -Lagrangian2dPara::gravityY);
+
+                //周围粒子
+                std::vector<FluidSimulation::Lagrangian2d::ParticleInfo2d> blockParticles = searchNearArea(p, mPs);
+
+                //压力带来的加速度
+                if (blockParticles.size() != 0) {
+                    for (auto& nearby : blockParticles) {
+                        if (&p != &nearby) {
+                            glm::vec2 r = p.position - nearby.position;
+                            double temp = mass * (p.pressDivDens2 + nearby.pressDivDens2);
+                            float distance = glm::length(p.position - nearby.position);
+                            p.accleration -= p.density*glm::vec2(temp) * kernelW_grad(distance,r, supportRadius);
+                        }
+                    }
+                }
+
+                //粘性力带来的加速度
+                if (blockParticles.size() != 0) {
+                    for (auto& nearby : blockParticles) {
+                        if (&p != &nearby) {
+                            double distance = glm::length(p.position - nearby.position);
+                            glm::vec2 r = p.position - nearby.position;
+                            auto temp = Lagrangian2dPara::viscosity * (float)mass * (float)Laplacian(distance) / nearby.density;
+                            p.accleration += temp * (nearby.velocity - p.velocity);
+                        }
+                    }
+                }
+            }
+
+            //计算粒子加速度、速度、位置
+            for (size_t i = 0; i < mPs.particles.size(); ++i) {
+                auto& p = mPs.particles[i];
+                /*for (auto& p : mPs.particles) {*/
+                    //加速度
+
+                //速度
+                p.velocity += p.accleration * Lagrangian2dPara::dt;
+
+
+
+                //检查边界
+                glm::vec2 new_position = p.position + p.velocity * Lagrangian2dPara::dt;
+
+                if (new_position.y <= mPs.lowerBound.y) {
+                    new_position.y = mPs.lowerBound.y + Lagrangian2dPara::eps;
+                    p.velocity.y = -p.velocity.y;
+                }
+                if (new_position.x <= mPs.lowerBound.x) {
+                    new_position.x = mPs.lowerBound.x + Lagrangian2dPara::eps;
+                    p.velocity.x = -p.velocity.x;
+                }
+                if (new_position.y >= mPs.upperBound.y) {
+                    new_position.y = mPs.upperBound.y - Lagrangian2dPara::eps;
+                    p.velocity.y = -p.velocity.y;
+                }
+                if (new_position.x >= mPs.upperBound.x) {
+                    new_position.x = mPs.upperBound.x - Lagrangian2dPara::eps;
+                    p.velocity.x = -p.velocity.x;
+                }
+
+                //更新粒子新位置
+                p.position = new_position;
+
+                // 更新块ID
+                p.blockId = mPs.getBlockIdByPosition(p.position);
+            }
         }
     }
 }
