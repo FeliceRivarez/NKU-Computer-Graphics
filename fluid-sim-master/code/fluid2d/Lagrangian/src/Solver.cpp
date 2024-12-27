@@ -133,6 +133,7 @@ namespace FluidSimulation
                         sum += kernelW(distance);
                     }
                     p.density = mass * sum;
+                    p.density = max(1.0 * p.density, 1.0 * 1000);
                 }
             }
         }
@@ -188,14 +189,6 @@ namespace FluidSimulation
             }
         }
 
-        //拉普拉斯算子
-        double Laplacian(double distance) {
-            if (supportRadius < distance) {
-                return 0;
-            }
-            return 30.0 / (pi * supportRadiusCube * supportRadius) * (supportRadius - distance);
-        }
-
         void Solver::solve()
         {
             // TODO
@@ -229,7 +222,7 @@ namespace FluidSimulation
                         if (&p != &nearby) {
                             glm::vec2 r = p.position - nearby.position;
                             float distance = glm::length(p.position - nearby.position);
-                            p.accleration -= (float)mass * (p.pressDivDens2 + nearby.pressDivDens2) * kernelW_grad(distance,r, supportRadius);
+                            p.accleration -= (float)(mass) * (p.pressDivDens2 + nearby.pressDivDens2) * kernelW_grad(distance, r, supportRadius);
                         }
                     }
                 }
@@ -238,13 +231,9 @@ namespace FluidSimulation
                 if (blockParticles.size() != 0) {
                     for (auto& nearby : blockParticles) {
                         if (&p != &nearby) {
-                            double distance = glm::length(p.position - nearby.position);
+                            float distance = glm::length(p.position - nearby.position);
                             glm::vec2 r = p.position - nearby.position;
-                            auto temp = Lagrangian2dPara::viscosity * (float)mass * (float)Laplacian(distance) / nearby.density;
-                            p.accleration += temp * (nearby.velocity - p.velocity);
-                            /*float distance = glm::length(p.position - nearby.position);
-                            glm::vec2 r = p.position - nearby.position;
-                            p.accleration += Lagrangian2dPara::viscosity*mass*glm::dot((p.velocity-nearby.velocity), r) * kernelW_grad(distance, r, supportRadius) /float((nearby.density*(distance*distance+0.01*supportRadiusSquare)));*/
+                            p.accleration += Lagrangian2dPara::viscosity*mass*glm::dot((p.velocity-nearby.velocity), r) * kernelW_grad(distance, r, supportRadius) /float((nearby.density*(distance*distance+0.01*supportRadiusSquare)));
                         }
                     }
                 }

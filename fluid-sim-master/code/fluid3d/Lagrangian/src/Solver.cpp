@@ -165,7 +165,7 @@ namespace FluidSimulation
             }
         }
 
-        double SphSpiKernel_SecondDerivative(double distance) {
+        double Wgrad(double distance) {
             if (distance >= supportRadius)
             {
                 return 0;
@@ -223,7 +223,7 @@ namespace FluidSimulation
                         if (&p != &nearby) {
                             double distance = glm::length(p.position - nearby.position);
                             glm::vec3 r = p.position - nearby.position;
-                            auto temp = Lagrangian2dPara::viscosity * (float)mass * SphSpiKernel_SecondDerivative(distance) / nearby.density;
+                            auto temp = Lagrangian2dPara::viscosity * (float)mass * Wgrad(distance) / nearby.density;
                             p.accleration += (float)temp * (nearby.velocity - p.velocity);
                         }
                     }
