@@ -78,22 +78,17 @@ namespace FluidSimulation
                 // 遍历整个block中所有粒子
                 for (int i = startIndex; i < endIndex; i++) 
                 {
-                    try {
-                        // 计算当前粒子与邻近block中粒子的距离
-                        // glm库里面length的定义和使用参见：
-                        // https://openframeworks.cc/documentation/math/ofVec2f/#!show_length
-                        double distance = glm::length(mPs.particles[i].position - p.position);
+                    // 计算当前粒子与邻近block中粒子的距离
+                    // glm库里面length的定义和使用参见：
+                    // https://openframeworks.cc/documentation/math/ofVec2f/#!show_length
+                    double distance = glm::length(mPs.particles[i].position - p.position);
 
-                        // 将粒子添加到容器中
-                        if (distance <= supportRadius)
-                        {
-                            nearParticles.push_back(mPs.particles[i]);
-                        }
-                    }
-                    catch (const std::exception& e)
+                    // 将粒子添加到容器中
+                    if (distance <= supportRadius)
                     {
-                        cout << startIndex << " " << endIndex << endl;
+                        nearParticles.push_back(mPs.particles[i]);
                     }
+
                 }
             }
             return nearParticles;
@@ -106,6 +101,10 @@ namespace FluidSimulation
         {
             double q = distance / supportRadius;
             double sigma2 = 40 / (7 * pi * supportRadiusSquare);
+            if (distance < 1e-2)
+            {
+                return 0.0;
+            }
             if (q > 1)
             {
                 return 0.0;
@@ -147,9 +146,17 @@ namespace FluidSimulation
         glm::vec2 kernelW_grad(float distance, const glm::vec2& r, float h)
         {
             float q = distance / supportRadius;
-            auto grad_q = r;
+            auto grad_q = r/(supportRadius*distance);
             float sigma2 = 40 / (7 * pi * supportRadiusSquare);
-            if (q > 1)
+            //if (r.x < 0)
+            //{
+            //    grad_q.x = -grad_q.x;
+            //}
+            //if (r.y < 0)
+            //{
+            //    grad_q.y = -grad_q.y;
+            //}
+            if (q > 1||distance<1e-5)
             {
                 return glm::vec2(0.0f, 0.0f);
             }
@@ -161,6 +168,7 @@ namespace FluidSimulation
             {
                 return sigma2 * (6 * float((3*pow(q, 2)) - 2*q))*grad_q;
             }
+            
         }
 
         // 先计算压强
@@ -220,9 +228,8 @@ namespace FluidSimulation
                     for (auto& nearby : blockParticles) {
                         if (&p != &nearby) {
                             glm::vec2 r = p.position - nearby.position;
-                            double temp = mass * (p.pressDivDens2 + nearby.pressDivDens2);
                             float distance = glm::length(p.position - nearby.position);
-                            p.accleration -= p.density*glm::vec2(temp) * kernelW_grad(distance,r, supportRadius);
+                            p.accleration -= (float)mass * (p.pressDivDens2 + nearby.pressDivDens2) * kernelW_grad(distance,r, supportRadius);
                         }
                     }
                 }
@@ -235,6 +242,9 @@ namespace FluidSimulation
                             glm::vec2 r = p.position - nearby.position;
                             auto temp = Lagrangian2dPara::viscosity * (float)mass * (float)Laplacian(distance) / nearby.density;
                             p.accleration += temp * (nearby.velocity - p.velocity);
+                            /*float distance = glm::length(p.position - nearby.position);
+                            glm::vec2 r = p.position - nearby.position;
+                            p.accleration += Lagrangian2dPara::viscosity*mass*glm::dot((p.velocity-nearby.velocity), r) * kernelW_grad(distance, r, supportRadius) /float((nearby.density*(distance*distance+0.01*supportRadiusSquare)));*/
                         }
                     }
                 }
@@ -269,6 +279,11 @@ namespace FluidSimulation
                 if (new_position.x >= mPs.upperBound.x) {
                     new_position.x = mPs.upperBound.x - Lagrangian2dPara::eps;
                     p.velocity.x = -p.velocity.x;
+                }
+
+                if (new_position.y <= mPs.lowerBound.y) {
+                    new_position.y = mPs.lowerBound.y + Lagrangian2dPara::eps;
+                    p.velocity.y = -p.velocity.y;
                 }
 
                 //更新粒子新位置
