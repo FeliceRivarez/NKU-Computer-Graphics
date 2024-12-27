@@ -98,10 +98,23 @@ namespace FluidSimulation
         // 核函数W: 公式推导参考 https://yangwc.com/2019/08/29/SPH/#1%E3%80%81%E8%AE%A1%E7%AE%97%E7%B2%92%E5%AD%90%E7%9A%84%E5%AF%86%E5%BA%A6
         double kernelW(double distance)
         {
-            if (distance * distance >= supportRadiusSquare)
+            double q = distance / supportRadius;
+            double sigma2 = 8 / (pi * supportRadiusCube);
+            if (distance < 1e-2)
+            {
                 return 0.0;
-            else {
-                return 315.0f / (64.0f * pi * supportRadiusCube) * std::pow(1.0 - distance * distance / supportRadiusSquare, 3);
+            }
+            if (q > 1)
+            {
+                return 0.0;
+            }
+            if (q >= 0.5 && q <= 1)
+            {
+                return sigma2 * 2 * pow((1 - q), 3);
+            }
+            if (q <= 0.5)
+            {
+                return sigma2 * (6 * (pow(q, 3) - pow(q, 2)) + 1);
             }
         }
 

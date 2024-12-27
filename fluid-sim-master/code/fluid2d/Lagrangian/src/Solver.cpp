@@ -3,6 +3,10 @@
 #include <iostream>
 #include <algorithm>
 
+
+#include<omp.h>
+#define NUM_THREADS 32
+
 using namespace std;
 
 namespace FluidSimulation
@@ -124,10 +128,10 @@ namespace FluidSimulation
         {
             for (auto& p : mPs.particles) {
                 std::vector<FluidSimulation::Lagrangian2d::ParticleInfo2d> blockParticles = searchNearArea(p, mPs);
-                if (blockParticles.size() != 0) 
+                if (blockParticles.size() != 0)
                 {
                     double sum = 0.0;
-                    for (auto& p1 : blockParticles) 
+                    for (auto& p1 : blockParticles)
                     {
                         double distance = glm::length(p1.position - p.position);
                         sum += kernelW(distance);
@@ -135,7 +139,7 @@ namespace FluidSimulation
                     p.density = mass * sum;
                     p.density = max(1.0 * p.density, 1.0 * 1000);
                 }
-            }
+                }
         }
 
         
@@ -149,14 +153,6 @@ namespace FluidSimulation
             float q = distance / supportRadius;
             auto grad_q = r/(supportRadius*distance);
             float sigma2 = 40 / (7 * pi * supportRadiusSquare);
-            //if (r.x < 0)
-            //{
-            //    grad_q.x = -grad_q.x;
-            //}
-            //if (r.y < 0)
-            //{
-            //    grad_q.y = -grad_q.y;
-            //}
             if (q > 1||distance<1e-5)
             {
                 return glm::vec2(0.0f, 0.0f);
@@ -222,7 +218,7 @@ namespace FluidSimulation
                         if (&p != &nearby) {
                             glm::vec2 r = p.position - nearby.position;
                             float distance = glm::length(p.position - nearby.position);
-                            p.accleration -= (float)(mass) * (p.pressDivDens2 + nearby.pressDivDens2) * kernelW_grad(distance, r, supportRadius);
+                            p.accleration -=(float)(mass) * (p.pressDivDens2 + nearby.pressDivDens2) * kernelW_grad(distance, r, supportRadius);
                         }
                     }
                 }
@@ -242,13 +238,9 @@ namespace FluidSimulation
             //计算粒子加速度、速度、位置
             for (size_t i = 0; i < mPs.particles.size(); ++i) {
                 auto& p = mPs.particles[i];
-                /*for (auto& p : mPs.particles) {*/
-                    //加速度
 
                 //速度
                 p.velocity += p.accleration * Lagrangian2dPara::dt;
-
-
 
                 //检查边界
                 glm::vec2 new_position = p.position + p.velocity * Lagrangian2dPara::dt;
