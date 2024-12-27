@@ -30,11 +30,13 @@ namespace FluidSimulation
                     //下边界，存储速度的y分量
                     semi_LG = grid.semiLagrangian(grid.getBottom(i,j), Lagrangian2dPara::dt);
                     compute_Y(i,j) = grid.getVelocityY(semi_LG);
+
+                    //中心点，存储密度和温度
+                    semi_LG = grid.semiLagrangian(grid.getCenter(i,j), Lagrangian2dPara::dt);
+                    compute_D(i,j) = grid.mD.interpolate(semi_LG);
+                    compute_T(i,j) = grid.mT.interpolate(semi_LG);
                 }
-                //中心点，存储密度和温度
-                semi_LG = grid.semiLagrangian(grid.getCenter(i,j), Lagrangian2dPara::dt);
-                compute_D(i,j) = grid.mD.interpolate(semi_LG);
-                compute_T(i,j) = grid.mT.interpolate(semi_LG);
+                
 
             }
 
@@ -56,7 +58,7 @@ namespace FluidSimulation
 
             double tar = 1e-7;//收敛值
             
-            double rou = 1.3;//气体密度
+            double rou = 1.225;//烟雾气体密度，假设烟雾的密度为常数，并接近于空气的密度
             double coeff = -(rou*grid.cellSize*grid.cellSize)/Lagrangian2dPara::dt;//基本的迭代系数
             
 

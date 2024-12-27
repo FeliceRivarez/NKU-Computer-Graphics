@@ -63,8 +63,8 @@ namespace FluidSimulation
 
             double tar = 1e-7;//收敛值
             
-            double rou = 1.3;//气体密度
-            double coeff = -(rou*grid.cellSize*grid.cellSize)/Lagrangian3dPara::dt;//基本的迭代系数
+            double rou = 1.225;//烟雾气体密度，假设烟雾的密度为常数，并接近于空气的密度
+            double coeff = -(rou*grid.cellSize*grid.cellSize)/rou*Lagrangian3dPara::dt;//基本的迭代系数
 
             for(int index=0; index<66; index++){
                 auto compute_P = pressure;
