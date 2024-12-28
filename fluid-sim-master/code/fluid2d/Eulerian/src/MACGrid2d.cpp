@@ -53,13 +53,39 @@ namespace FluidSimulation
             mT.initialize(Eulerian2dPara::ambientTemp);
         }
 
+        // void MACGrid2d::createSolids()
+        // {
+        //     mSolid.initialize();
+        //     if (Eulerian2dPara::addSolid) {
+        //         int j = dim[1] / 2;
+        //         for (int i = dim[0] / 4; i < dim[0] * 3 / 4; i++) {
+        //             mSolid(i, j) = 1;
+        //         }
+        //     }
+        // }
         void MACGrid2d::createSolids()
         {
             mSolid.initialize();
             if (Eulerian2dPara::addSolid) {
-                int j = dim[1] / 2;
-                for (int i = dim[0] / 4; i < dim[0] * 3 / 4; i++) {
-                    mSolid(i, j) = 1;
+                int centerX = dim[0] / 2;  // 圆心 x 坐标
+                int centerY = dim[1] / 2;  // 圆心 y 坐标
+                int R = dim[0] / 4;   // 圆的半径
+
+                for (int i = 0; i < dim[0]; i++) {
+                    for (int j = 0; j < dim[1]; j++) {
+                        // 计算点到圆心的距离平方
+                        int len = (i - centerX) * (i - centerX) + (j - centerY) * (j - centerY);
+                        int out = R * R;
+                        int inn = (R - 1) * (R - 1);
+
+                        // 判断点是否在圆的边界上
+                        if (len <= out && len >= inn) {
+                            // 排除底部和顶部开口区域
+                            if (j > centerY - R + 2 && j<centerY+R-7 ||j>centerY+R-5) {
+                                mSolid(i, j) = 1;
+                            }
+                        }
+                    }
                 }
             }
         }
