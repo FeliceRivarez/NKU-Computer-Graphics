@@ -185,6 +185,42 @@ namespace FluidSimulation
             }
         }
 
+        glm::vec2 rectWall(FluidSimulation::Lagrangian2d::ParticleInfo2d &p, glm::vec2 curr_pos, 
+                            float lower_border, float higher_border, 
+                            float left_border, float right_border)
+        {
+            float delta = 1e-2;
+            auto new_position = curr_pos;
+            // 平台上边界
+            if (new_position.y<higher_border && new_position.y>higher_border - delta && new_position.x >= left_border && new_position.x <= right_border) {
+                new_position.y = higher_border + Lagrangian2dPara::eps;
+                p.velocity.y = -p.velocity.y;
+                //p.velocity.x = -p.velocity.x;
+            }
+
+            // 平台下边界
+            if (new_position.y > lower_border && new_position.y < lower_border + delta && new_position.x >= left_border && new_position.x <= right_border) {
+                new_position.y = lower_border - Lagrangian2dPara::eps;
+                p.velocity.y = -p.velocity.y;
+                //p.velocity.x = -p.velocity.x;
+            }
+
+            // 平台左边界
+            if (new_position.y<higher_border && new_position.y>lower_border && new_position.x >= left_border && new_position.x <= left_border + delta) {
+                new_position.x = left_border - Lagrangian2dPara::eps;
+                //p.velocity.y = -p.velocity.y;
+                p.velocity.x = -p.velocity.x;
+            }
+
+            // 平台右边界
+            if (new_position.y<higher_border && new_position.y>lower_border && new_position.x <= right_border && new_position.x > right_border - delta) {
+                new_position.x = right_border + Lagrangian2dPara::eps;
+                //p.velocity.y = -p.velocity.y;
+                p.velocity.x = -p.velocity.x;
+            }
+            return new_position;
+        }
+
         void Solver::solve()
         {
             // TODO
@@ -262,10 +298,55 @@ namespace FluidSimulation
                     p.velocity.x = -p.velocity.x;
                 }
 
-                if (new_position.y <= mPs.lowerBound.y) {
-                    new_position.y = mPs.lowerBound.y + Lagrangian2dPara::eps;
-                    p.velocity.y = -p.velocity.y;
-                }
+                //float lower_border = -0.8;
+                //float higher_border = -0.7;
+                //float left_border = 0.2;
+                //float right_border = 0.7;
+
+                new_position = rectWall(p, new_position, -1.8, -1.7, 0.2, 0.7);
+
+                new_position = rectWall(p, new_position, -1.1, -1, -0.1, 0.2);
+
+
+                //// 平台上边界
+                //if (new_position.y<higher_border && new_position.y>higher_border-0.01 && new_position.x >= 0.2 && new_position.x <= 0.7) {
+                //    new_position.y = higher_border + Lagrangian2dPara::eps;
+                //    p.velocity.y = -p.velocity.y;
+                //    //p.velocity.x = -p.velocity.x;
+                //}
+
+                //// 平台下边界
+                //if (new_position.y>lower_border && new_position.y< lower_border + 0.01 && new_position.x >= 0.2 && new_position.x <= 0.7) {
+                //    new_position.y = lower_border - Lagrangian2dPara::eps;
+                //    p.velocity.y = -p.velocity.y;
+                //    //p.velocity.x = -p.velocity.x;
+                //}
+
+                //// 平台左边界
+                //if (new_position.y<higher_border && new_position.y>lower_border && new_position.x >= left_border && new_position.x <= left_border+0.01) {
+                //    new_position.y = left_border - Lagrangian2dPara::eps;
+                //    //p.velocity.y = -p.velocity.y;
+                //    p.velocity.x = -p.velocity.x;
+                //}
+
+                //// 平台右边界
+                //if (new_position.y<higher_border && new_position.y>lower_border && new_position.x <= right_border && new_position.x > right_border - 0.01) {
+                //    new_position.y = right_border + Lagrangian2dPara::eps;
+                //    //p.velocity.y = -p.velocity.y;
+                //    p.velocity.x = -p.velocity.x;
+                //}
+
+                //if (new_position.y >= -0.8 && new_position.y <= -0.7 && new_position.x >= 0.2 && new_position.x <= 0.7) {
+                //    //new_position.y = mPs.lowerBound.y + Lagrangian2dPara::eps;
+                //    p.velocity.y = -p.velocity.y;
+                //    p.velocity.x = -p.velocity.x;
+                //}
+
+                //if (new_position.y >= -1.2 && new_position.y <= -1.1 && new_position.x >= -0.2 && new_position.x <= 0.5) {
+                //    //new_position.y = mPs.lowerBound.y + Lagrangian2dPara::eps;
+                //    p.velocity.y = -p.velocity.y;
+                //    p.velocity.x = -p.velocity.x;
+                //}
 
                 //更新粒子新位置
                 p.position = new_position;
